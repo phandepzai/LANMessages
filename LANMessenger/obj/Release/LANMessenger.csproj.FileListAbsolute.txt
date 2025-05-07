@@ -1,0 +1,10 @@
+D:\DEV\LANMessenger\LANMessenger\bin\Release\Messenger.exe.config
+D:\DEV\LANMessenger\LANMessenger\bin\Release\Messenger.exe
+D:\DEV\LANMessenger\LANMessenger\bin\Release\Messenger.pdb
+D:\DEV\LANMessenger\LANMessenger\obj\Release\LANMessenger.csproj.AssemblyReference.cache
+D:\DEV\LANMessenger\LANMessenger\obj\Release\Messenger.ChatForm.resources
+D:\DEV\LANMessenger\LANMessenger\obj\Release\Messenger.Properties.Resources.resources
+D:\DEV\LANMessenger\LANMessenger\obj\Release\LANMessenger.csproj.GenerateResource.cache
+D:\DEV\LANMessenger\LANMessenger\obj\Release\LANMessenger.csproj.CoreCompileInputs.cache
+D:\DEV\LANMessenger\LANMessenger\obj\Release\Messenger.exe
+D:\DEV\LANMessenger\LANMessenger\obj\Release\Messenger.pdb
