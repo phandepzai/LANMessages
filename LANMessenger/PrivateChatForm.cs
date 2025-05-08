@@ -1,4 +1,4 @@
-﻿using Messenger;
+using Messenger;
 using System.ComponentModel;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
@@ -15,70 +15,42 @@ using System.Diagnostics;
 
 // Định nghĩa partial class cho form chat riêng tư, thừa kế từ Form
 public partial class PrivateChatForm : Form
-{
-    // Biến lưu trữ tên người nhận tin nhắn
-    private string recipientUserName;
-    // Đối tượng TcpClient để kết nối mạng
-    private TcpClient tcpClient;
-    // ListBox để hiển thị các tin nhắn chat riêng tư
-    private ListBox lbPrivateChatMessages;
-    // TextBox để người dùng nhập tin nhắn
-    private TextBox txtMessageInput;
-    // Panel chứa khu vực nhập tin nhắn
-    private Panel pnlInputArea;
-    // Menu ngữ cảnh cho tin nhắn
-    private ContextMenuStrip messageContextMenu;
-    // Mục menu để sao chép tin nhắn
-    private ToolStripMenuItem copyMessageMenuItem;
-    // Tên của người dùng hiện tại (người gửi)
-    private string myName;
-
-    // Hằng số định nghĩa khoảng đệm cho bong bóng tin nhắn
-    private const int MessageBubblePadding = 12;
-    // Hằng số định nghĩa bán kính bo tròn góc cho bong bóng tin nhắn
-    private const int MessageBubbleCornerRadius = 18;
-    // Hằng số định nghĩa kích thước avatar
-    private const int AvatarSize = 32;
-    // Hằng số định nghĩa khoảng cách lề cho avatar
-    private const int AvatarMargin = 8;
-    // Hằng số định nghĩa chiều cao cho dấu thời gian
-    private const int TimestampHeight = 15;
-    // Hằng số định nghĩa chiều cao cho tên người gửi
-    private const int SenderNameHeight = 14;
-    // Hằng số định nghĩa khoảng cách dọc giữa các mục
-    private const int VerticalSpacing = 8;
-    // Màu sắc cho tin nhắn đã gửi đi
-    private Color SentMessageColor = Color.FromArgb(136, 219, 136);
-    // Màu sắc cho tin nhắn nhận được
-    private Color ReceivedMessageColor = Color.FromArgb(220, 220, 220);
-    // Màu nền của form chat
-    private Color BackgroundColor = Color.FromArgb(240, 242, 245);
-    // Màu nền của khu vực hiển thị chat (ListBox)
-    private Color ChatAreaBackgroundColor = Color.White;
-    // Màu sắc khi chọn một mục trong ListBox
-    private Color SelectedItemColor = Color.FromArgb(250, 250, 250);
-    // Chiều rộng tối đa của bong bóng tin nhắn
-    private const int MaxBubbleWidth = 250;
+{    
+    private string recipientUserName;// Biến lưu trữ tên người nhận tin nhắn    
+    private TcpClient tcpClient;// Đối tượng TcpClient để kết nối mạng    
+    private ListBox lbPrivateChatMessages;// ListBox để hiển thị các tin nhắn chat riêng tư   
+    private TextBox txtMessageInput; // TextBox để người dùng nhập tin nhắn    
+    private Panel pnlInputArea;// Panel chứa khu vực nhập tin nhắn    
+    private ContextMenuStrip messageContextMenu;// Menu ngữ cảnh cho tin nhắn    
+    private ToolStripMenuItem copyMessageMenuItem;// Mục menu để sao chép tin nhắn    
+    private string myName;// Tên của người dùng hiện tại (người gửi)    
+    private const int MessageBubblePadding = 12;// Hằng số định nghĩa khoảng đệm cho bong bóng tin nhắn    
+    private const int MessageBubbleCornerRadius = 18;// Hằng số định nghĩa bán kính bo tròn góc cho bong bóng tin nhắn    
+    private const int AvatarSize = 32;// Hằng số định nghĩa kích thước avatar    
+    private const int AvatarMargin = 8;// Hằng số định nghĩa khoảng cách lề cho avatar    
+    private const int TimestampHeight = 15;// Hằng số định nghĩa chiều cao cho dấu thời gian    
+    private const int SenderNameHeight = 14;// Hằng số định nghĩa chiều cao cho tên người gửi    
+    private const int VerticalSpacing = 8;// Hằng số định nghĩa khoảng cách dọc giữa các mục   
+    private Color SentMessageColor = Color.FromArgb(136, 219, 136); // Màu sắc cho tin nhắn đã gửi đi
+    private Color ReceivedMessageColor = Color.FromArgb(220, 220, 220);// Màu sắc cho tin nhắn nhận được   
+    private Color BackgroundColor = Color.FromArgb(240, 242, 245);// Màu nền của form chat    
+    private Color ChatAreaBackgroundColor = Color.White;// Màu nền của khu vực hiển thị chat (ListBox) 
+    private Color SelectedItemColor = Color.FromArgb(250, 250, 250);// Màu sắc khi chọn một mục trong ListBox
+    private const int MaxBubbleWidth = 250; // Chiều rộng tối đa của bong bóng tin nhắn
 
     // Hàm tìm các URL trong đoạn văn bản
     private List<Tuple<string, int, int>> FindUrlsInText(string text)
-    {
-        // Khởi tạo danh sách để lưu trữ thông tin URL (URL, vị trí bắt đầu, độ dài)
-        List<Tuple<string, int, int>> urls = new List<Tuple<string, int, int>>();
-        // Biểu thức chính quy để phát hiện URL
-        Regex urlRegex = new Regex(@"\b(?:https?://|www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}(?:[/\w- .?%&=#]*)?\b", RegexOptions.IgnoreCase);
-        // Tìm tất cả các URL phù hợp trong văn bản
-        MatchCollection matches = urlRegex.Matches(text);
-        // Lặp qua các kết quả tìm được
-        foreach (Match match in matches)
-        {
-            // Thêm thông tin URL vào danh sách
-            urls.Add(Tuple.Create(match.Value, match.Index, match.Length));
-            // Ghi log debug khi tìm thấy URL
-            Debug.WriteLine($"[DEBUG FindUrlsInText] Tìm thấy URL: '{match.Value}' tại vị trí {match.Index}, độ dài {match.Length}");
-        }
-        // Trả về danh sách URL tìm được
-        return urls;
+    {       
+        List<Tuple<string, int, int>> urls = new List<Tuple<string, int, int>>();// Khởi tạo danh sách để lưu trữ thông tin URL (URL, vị trí bắt đầu, độ dài)       
+        Regex urlRegex = new Regex(@"\b(?:https?://|www\.)?[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,}(?:[/\w- .?%&=#]*)?\b", RegexOptions.IgnoreCase);// Biểu thức chính quy để phát hiện URL       
+        MatchCollection matches = urlRegex.Matches(text);// Tìm tất cả các URL phù hợp trong văn bản      
+        foreach (Match match in matches)// Lặp qua các kết quả tìm được
+        {            
+            urls.Add(Tuple.Create(match.Value, match.Index, match.Length));// Thêm thông tin URL vào danh sách
+            
+            Debug.WriteLine($"[DEBUG FindUrlsInText] Tìm thấy URL: '{match.Value}' tại vị trí {match.Index}, độ dài {match.Length}");// Ghi log debug khi tìm thấy URL
+        }        
+        return urls;// Trả về danh sách URL tìm được
     }
 
     // Constructor của form chat riêng tư
@@ -192,17 +164,12 @@ public partial class PrivateChatForm : Form
 
     // Phương thức khởi tạo menu ngữ cảnh cho tin nhắn
     private void InitializeMessageContextMenu()
-    {
-        // Khởi tạo ContextMenuStrip
-        messageContextMenu = new ContextMenuStrip();
-        // Khởi tạo ToolStripMenuItem "Sao chép"
-        copyMessageMenuItem = new ToolStripMenuItem("Sao chép");
-        // Đăng ký sự kiện Click cho mục "Sao chép"
-        copyMessageMenuItem.Click += CopyMessageMenuItem_Click;
-        // Thêm mục "Sao chép" vào menu
-        messageContextMenu.Items.Add(copyMessageMenuItem);
-        // Đăng ký sự kiện Opening của menu ngữ cảnh
-        messageContextMenu.Opening += MessageContextMenu_Opening;
+    {       
+        messageContextMenu = new ContextMenuStrip(); // Khởi tạo ContextMenuStrip       
+        copyMessageMenuItem = new ToolStripMenuItem("Sao chép");// Khởi tạo ToolStripMenuItem "Sao chép"       
+        copyMessageMenuItem.Click += CopyMessageMenuItem_Click; // Đăng ký sự kiện Click cho mục "Sao chép"       
+        messageContextMenu.Items.Add(copyMessageMenuItem); // Thêm mục "Sao chép" vào menu       
+        messageContextMenu.Opening += MessageContextMenu_Opening; // Đăng ký sự kiện Opening của menu ngữ cảnh
     }
 
     // Phương thức tính toán vị trí và kích thước của các vùng URL trong tin nhắn
