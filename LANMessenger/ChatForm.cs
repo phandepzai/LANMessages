@@ -441,9 +441,9 @@ namespace Messenger
             this.lbOnlineUsers.Name = "lbOnlineUsers";
             this.lbOnlineUsers.Size = new Size(180, 450); // Kích thước ban đầu
             this.lbOnlineUsers.TabIndex = 1; // Thứ tự Tab
-            this.lbOnlineUsers.Font = new Font("Segoe UI", 9.75F); // Font
+            this.lbOnlineUsers.Font = new Font("Segoe UI", 9.75F, FontStyle.Bold); // Font
+            this.lbOnlineUsers.ForeColor = Color.DarkCyan;//Màu chữ
             this.lbOnlineUsers.MouseDoubleClick += LbOnlineUsers_MouseDoubleClick; // Gán sự kiện double click chuột
-            // neo điều khiển vào các cạnh của form khi form thay đổi kích thước
             this.lbOnlineUsers.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left;
             this.lbOnlineUsers.BorderStyle = BorderStyle.None; // Bỏ viền
             this.lbOnlineUsers.BackColor = UserListBackgroundColor; // Màu nền
