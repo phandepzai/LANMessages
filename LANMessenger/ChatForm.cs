@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -71,7 +71,10 @@ namespace Messenger
         private Color originalAuthorColor; // Màu gốc của tên tác giả
         private double rainbowPhase; // Giai đoạn để tính toán màu cầu vồng
 
-
+        // Thêm vào phần khai báo biến thành viên
+        private Label lblTypingStatus; // Label hiển thị trạng thái đang nhập
+        private System.Windows.Forms.Timer typingTimer; // Timer để ẩn trạng thái sau một khoảng thời gian
+        private Dictionary<string, DateTime> userTypingTimes = new Dictionary<string, DateTime>(); // Theo dõi thời gian đánh máy của từng người dùng
 
 
         private List<Tuple<string, int, int>> FindUrlsInText(string text)
@@ -105,6 +108,7 @@ namespace Messenger
             InitializeComponent(); // Khởi tạo các điều khiển trên giao diện (do Designer tạo ra)
             InitializeCleanupTimer(); // Khởi tạo timer dọn dẹp lịch sử
             InitializeClockTimer(); // Khởi tạo timer cập nhật đồng hồ
+            InitializeTypingStatus(); //Trạng thái nhập tin nhắn
             ctsNetwork = new CancellationTokenSource(); // Khởi tạo đối tượng hủy tác vụ mạng
             this.Load += ChatForm_Load; // Gán sự kiện Load cho form
             this.FormClosing += ChatForm_FormClosing; // Gán sự kiện FormClosing cho form
@@ -586,6 +590,85 @@ namespace Messenger
             this.pnlInputArea.PerformLayout();
         }
 
+        // Thêm vào phương thức InitializeComponent()
+        private void InitializeTypingStatus()
+        {
+            // Khởi tạo label trạng thái đang nhập
+            lblTypingStatus = new Label();
+            lblTypingStatus.AutoSize = true;
+            lblTypingStatus.Font = new Font("Segoe UI", 9F, FontStyle.Italic);
+            lblTypingStatus.ForeColor = Color.Gray;
+            lblTypingStatus.BackColor = Color.Transparent;
+            lblTypingStatus.Visible = false;
+            lblTypingStatus.Text = "đang nhập tin nhắn...";
+
+            // Đặt vị trí ở góc dưới bên trái của lbChatMessages
+            lblTypingStatus.Location = new Point(
+                lbChatMessages.Left + 5,
+                lbChatMessages.Bottom - lblTypingStatus.Height
+            );
+
+            // Neo vào mép dưới và trái
+            lblTypingStatus.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
+
+            this.Controls.Add(lblTypingStatus);
+            lblTypingStatus.BringToFront();
+
+            // Khởi tạo timer cho trạng thái đang nhập
+            typingTimer = new System.Windows.Forms.Timer();
+            typingTimer.Interval = 3000; // 3 giây
+            typingTimer.Tick += TypingTimer_Tick;
+        }
+
+        private void TypingTimer_Tick(object sender, EventArgs e)
+        {
+            // Kiểm tra và cập nhật trạng thái đang nhập
+            UpdateTypingStatus();
+        }
+
+        private void UpdateTypingStatus()
+        {
+            // Lọc các người dùng đã ngừng nhập (quá 3 giây)
+            var inactiveUsers = userTypingTimes
+                .Where(kv => (DateTime.Now - kv.Value).TotalSeconds > 3)
+                .Select(kv => kv.Key)
+                .ToList();
+
+            // Xóa các người dùng không còn nhập
+            foreach (var user in inactiveUsers)
+            {
+                userTypingTimes.Remove(user);
+            }
+
+            // Cập nhật hiển thị
+            if (userTypingTimes.Any())
+            {
+                string statusText = userTypingTimes.Count == 1
+                    ? $"{userTypingTimes.First().Key} đang nhập tin nhắn..."
+                    : "Nhiều người đang nhập...";
+
+                lblTypingStatus.Text = statusText;
+                lblTypingStatus.Visible = true;
+            }
+            else
+            {
+                lblTypingStatus.Visible = false;
+            }
+        }
+
+        public void NotifyTyping(string userName)
+        {
+            // Cập nhật thời gian nhập tin của người dùng
+            userTypingTimes[userName] = DateTime.Now;
+
+            // Hiển thị trạng thái
+            UpdateTypingStatus();
+
+            // Khởi động lại timer
+            typingTimer.Stop();
+            typingTimer.Start();
+        }
+
         // Khởi tạo timer cập nhật đồng hồ và lịch
         private void InitializeClockTimer()
         {
@@ -651,8 +734,36 @@ namespace Messenger
         // Xử lý sự kiện khi nội dung ô nhập tin nhắn thay đổi
         private void TxtMessageInput_TextChanged(object sender, EventArgs e)
         {
+            // Logic cũ giữ nguyên
             int lineCount = txtMessageInput.GetLineFromCharIndex(txtMessageInput.TextLength) + 1;
             txtMessageInput.ScrollBars = lineCount > 3 ? ScrollBars.Vertical : ScrollBars.None;
+
+            // Gửi tín hiệu đang nhập nếu có nội dung
+            if (!string.IsNullOrEmpty(txtMessageInput.Text))
+            {
+                SendTypingNotification();
+            }
+        }
+
+        private async void SendTypingNotification()
+        {
+            // Gửi tín hiệu đang nhập đến tất cả người dùng
+            string typingMessage = $"TYPING:{myName}";
+            byte[] buffer = Encoding.UTF8.GetBytes(typingMessage);
+
+            foreach (var client in activeConnections.ToList())
+            {
+                if (client.Connected)
+                {
+                    try
+                    {
+                        NetworkStream stream = client.GetStream();
+                        await stream.WriteAsync(buffer, 0, buffer.Length);
+                        await stream.FlushAsync();
+                    }
+                    catch { /* Bỏ qua lỗi */ }
+                }
+            }
         }
 
         // Xử lý sự kiện Paint cho nút gửi (không có logic cụ thể trong mã hiện tại)
@@ -1456,6 +1567,13 @@ namespace Messenger
         // Phương thức xử lý dữ liệu nhận được từ một client TCP (bao gồm PRESENCE, PUBLIC, và tin nhắn riêng)
         private void ProcessReceivedData(TcpClient senderClient, string data)
         {
+            // Thêm kiểm tra cho tín hiệu đang nhập
+            if (data.StartsWith("TYPING:"))
+            {
+                var userName = data.Substring(7);
+                this.Invoke((MethodInvoker)(() => NotifyTyping(userName)));
+                return;
+            }
             LogMessage($"Nhận dữ liệu từ {senderClient.Client.RemoteEndPoint}: {data}"); // Ghi log dữ liệu nhận được
 
             // Kiểm tra nếu dữ liệu là gói tin PRESENCE
